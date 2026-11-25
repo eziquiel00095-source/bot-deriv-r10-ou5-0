@@ -170,8 +170,10 @@ def iniciar_robo():
         return
 
     ws_url = f"wss://ws.derivws.com/websockets/v3?app_id={DERIV_APP_ID}"
+    espera = 15
 
     while True:
+        inicio = time.monotonic()
         try:
             ws = websocket.WebSocketApp(
                 ws_url,
@@ -180,12 +182,22 @@ def iniciar_robo():
                 on_error=on_error,
                 on_close=on_close
             )
-            ws.run_forever(ping_interval=30, ping_timeout=10)
+            ws.run_forever(
+                ping_interval=30,
+                ping_timeout=10,
+                origin="https://app.deriv.com"
+            )
         except Exception as exc:
             logging.exception(f"Erro inesperado: {exc}")
 
-        logging.info("Reconectando em 5 segundos...")
-        time.sleep(5)
+        # Se ficou conectado por mais de 30s, reseta a espera; senão aumenta até 60s
+        if time.monotonic() - inicio > 30:
+            espera = 15
+        else:
+            espera = min(espera * 2, 60)
+
+        logging.info(f"Reconectando em {espera} segundos...")
+        time.sleep(espera)
 
 
 if __name__ == "__main__":
